@@ -3,6 +3,8 @@
 """
 Created on Thu Jun 27 09:45:15 2024
 
+This file works within the Gaussian Optics approximation to propagate a Gaussian beam
+
 @author: thomas
 """
 import matplotlib.pyplot as plt
