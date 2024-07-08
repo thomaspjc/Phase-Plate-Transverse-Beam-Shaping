@@ -19,14 +19,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 from numpy import pi
 from padding import fastOn, fastOff
-from scipy.fft import fft2, ifft2, fftshift, ifftshift
+from scipy.fft import fft2, ifft2, fftshift, ifftshift, fftfreq
+from matplotlib.colors import LogNorm
 
 # --- Globals ---
 wavelength = 253 * 1e-9
 w0 = 4 * 1e-3
 f = 1.2
 #k0 = 2* pi / wavelength
-extent = [-5* w0, 5* w0]
+extent = [-8 * w0, 8 * w0]
+z0 = pi/wavelength * w0**2
 
 def Gaussian(sizeFactor = 11, wavelength = wavelength, w0 = w0, extent = extent, plot = False):
     
@@ -35,7 +37,7 @@ def Gaussian(sizeFactor = 11, wavelength = wavelength, w0 = w0, extent = extent,
     q0 = 1j * z0
     k0 = 2* pi / wavelength
     
-    # --- Build a meshgrid to apply teh gaussian too ---
+    # --- Build a meshgrid to apply the gaussian too ---
     gridSize = 2 ** sizeFactor
     x_ = np.linspace(extent[0], extent[1], gridSize)
     y_ = np.linspace(extent[0], extent[1], gridSize)
@@ -43,7 +45,7 @@ def Gaussian(sizeFactor = 11, wavelength = wavelength, w0 = w0, extent = extent,
     rSquare = X**2 + Y**2
     
     # --- Creating the gaussian field using complex beam parameter ---    
-    field = 1/q0 * np.exp(- 1j * k0 * rSquare / (2* q0))
+    field = 1/q0 * np.exp(- 1j * k0 * rSquare / (2 * q0))
 
     # --- Plotting the field if required --- 
     if plot:
@@ -67,5 +69,128 @@ def Gaussian(sizeFactor = 11, wavelength = wavelength, w0 = w0, extent = extent,
         ax2.set_xlabel('Beam size (m)')
         ax3.set_xlabel('Beam size (m)')
         ax1.set_ylabel('Beam size (m)')
+        plt.show()
     
     return field
+
+
+def Propagate(inputBeam, z, wavelength = wavelength, w0 = w0, padding = 1, extent = extent, plot = False):
+    """
+    Applying the propagator transfer function to an input Complex Beam 
+
+    Parameters
+    ----------
+    inputBeam : np.array
+        The complex beam to apply the transfer function to
+    z : float
+        The distance to propagate by
+    wavelength : float, optional
+        Single wavelength of the beam. The default is 253 nm
+    w0 : float, optional
+        The wait of the curve using 1/e of the amplitude. The default is 4 mm
+    padding : integer, optional
+        factor of 2 to pad the array with -> See padding.py. The default is 1.
+    extent : array, optional
+        Extent of the array to build. The default is set in the globals.
+    plot : Bool, optional
+        Boolean to choose if plots should be made. The default is False.
+
+    References
+    ---------
+    I) Fourier Optics and Computational Imaging, Kedar Khare, Chap 11
+
+    Returns
+    -------
+    outputBeam : np.array
+        Output Beam in real space with no padding after applying the transfer function
+
+    """
+    
+    # --- Extracting Parameters ---
+    k0 = 2 * pi / wavelength
+    
+    # --- Step 1 : Transforming the input beam to k-space ---
+    #Apply the padding to ensure high quality FFT
+    paddedBeam = fastOn(inputBeam, padding)
+    kBeam = fftshift(fft2(paddedBeam))
+    kShape = kBeam.shape[0]
+    
+
+    # --- Step 2 Apply the propagator --- 
+    #Creating k-Space coordinates
+    kx_, ky_ = fftfreq(kShape, d = 2**(1+padding) * extent[1]/kShape), fftfreq(kShape, d = 2**(1+padding)*extent[1]/kShape)
+    
+    kx_ = fftshift(kx_)
+    ky_ = fftshift(ky_)
+    kx, ky = np.meshgrid(kx_, ky_)
+    
+
+    #Propagator taken from K Khare (see ref)
+    propagator =  np.exp(1j * z * np.sqrt(k0**2 - 4 * pi**2 * (kx**2 + ky**2)))
+    
+    #Apply the propagator in k space
+    kPadded = kBeam * propagator
+    
+    # --- Step 3 : Return to real space ---
+    #Return to Cartesian
+    outputPadded = ifft2(ifftshift(kPadded))
+    
+    #Remove the padding
+    outputBeam = fastOff(outputPadded, padding)
+    
+    return outputBeam 
+
+
+
+def Lens(inputBeam, f, wavelength = wavelength, w0 = w0, extent = extent, plot = False):
+    """
+    Applying a lens transformation to an incoming Complex Beam
+
+    Parameters
+    ----------
+    inputBeam : np.array
+        The complex beam to apply the transfer function to
+    f : float
+        The focal length of the lens to use (assumed symmetrical in x and y)
+    wavelength : float, optional
+        Single wavelength of the beam. The default is 253 nm
+    w0 : float, optional
+        The wait of the curve using 1/e of the amplitude. The default is 4 mm
+    extent : array, optional
+        Extent of the array to build. The default is set in the globals.
+    plot : Bool, optional
+        Boolean to choose if plots should be made. The default is False.
+        
+    References
+    ----------
+    I) 'Soft x-ray self-seeding simulation methods and their application for 
+        the Linac Coherent Light Source', S. Serkez et al.
+
+    Returns
+    -------
+    outputBeam : np.array
+        Outgoing Complex Beam after Lens  transformation
+
+    """
+    
+    # --- Extracting Parameters --- 
+    k0 = 2 * pi / wavelength
+    inputShape = inputBeam.shape
+    
+    # --- Building the transfer function ---
+    x_, y_ = np.linspace(extent[0], extent[1], inputShape[0]), np.linspace(extent[0], extent[1], inputShape[1])
+    X, Y = np.meshgrid(x_, y_)
+    rSquare = (X**2 + Y**2)
+    
+    #Built using reference I's radius of curvature implementation
+    lensShift = np.exp(-1j * k0 * rSquare/(2 * f))
+    
+    # --- Applying the transfer function in real space ---
+    outputBeam = inputBeam * lensShift
+    
+    # --- Possible Plotting ---
+    if plot:
+        plt.imshow(np.abs(outputBeam)**2)
+    
+    return outputBeam
+    
