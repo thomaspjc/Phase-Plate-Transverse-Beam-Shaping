@@ -83,7 +83,86 @@ def paddingOff(paddedArray, size):
     
     return unpadded
 
+def fastOn(inputArray, size):
+    """
+    Applies a padding to the input array such that it maximises computing time for an FFT
+    Increases the input Array with a padding such that 2^n -> 2^(n+size)
 
+    Parameters
+    ----------
+    inputArray : np.array
+        The array that should be padded with shape 2^n x 2^n
+    size : integer
+        size factor increase
+
+    Raises
+    ------
+    ValueError
+        The input array should be a factor of 2 (initial fast shape)
+        The input array should be symmetrical
+
+    Returns
+    -------
+    paddedOut : np.array
+        padded array such that the input is centered in a 2^(n+size) array
+        surrounded by 0s
+
+    """
+    # --- Determine the shape of the current Array ---
+    inputShape = inputArray.shape
+    factor = np.log2(inputShape[0])
+    # --- Catching Errors for Fast Transforms ---
+    if factor.is_integer() == False:
+        raise ValueError("The input Array was not in a fast shape 2**n")
+    if inputShape[0] != inputShape[1]:
+        raise ValueError("The input Array should be symmetrical: 2**n x 2**n")
+    
+    # --- Prepare the new padded shape ---
+    newFactor = factor + size
+    paddedShape = 2**newFactor
+    paddedOut = np.zeros(paddedShape, dtype = inputArray.dtype)
+    
+    # --- Centering the input Array inside the padded one --- 
+    
+    startRow = int((paddedShape - inputShape[0]) / 2)
+    startCol = int((paddedShape - inputShape[1]) / 2)
+    paddedOut[startRow:startRow + inputShape[0], startCol:startCol + inputShape[1]] = inputArray
+    
+    return paddedOut
+
+def fastOff(paddedArray, size): 
+    """
+    To be applied after a fastOn, 
+    Removes the padding applied by fastOn given the same size factor
+
+    Parameters
+    ----------
+    paddedArray : np.array
+        Input array with padding added from fastOn
+    size : integer
+        factor that the array was padded using fastOn
+
+    Returns
+    -------
+    unpadded : np.array
+        Array with removed padding from fastOn
+
+    """
+    
+    # --- Determine the shape of the padded array ---
+    paddedShape = paddedArray.shape
+    paddedFactor = np.log2(paddedShape[0])
+    
+    # --- Determine the size of the unpadded array ---
+    extractShape = 2**(paddedFactor - size)
+    
+    # --- Extract the unpadded array ---
+    startRow = int((paddedShape[0] - extractShape) / 2)
+    startCol = int((paddedShape[1] - extractShape) / 2)
+    unpadded = paddedArray[startRow:(startRow + int(extractShape[0])), startCol:(startCol + int(extractShape[1]))]
+    return unpadded
+    
+    
 
 
 
