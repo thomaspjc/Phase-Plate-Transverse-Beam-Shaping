@@ -120,7 +120,7 @@ def fastOn(inputArray, size):
     # --- Prepare the new padded shape ---
     newFactor = factor + size
     paddedShape = 2**newFactor
-    paddedOut = np.zeros(paddedShape, dtype = inputArray.dtype)
+    paddedOut = np.zeros((int(paddedShape),int(paddedShape)), dtype = inputArray.dtype)
     
     # --- Centering the input Array inside the padded one --- 
     
@@ -159,7 +159,7 @@ def fastOff(paddedArray, size):
     # --- Extract the unpadded array ---
     startRow = int((paddedShape[0] - extractShape) / 2)
     startCol = int((paddedShape[1] - extractShape) / 2)
-    unpadded = paddedArray[startRow:(startRow + int(extractShape[0])), startCol:(startCol + int(extractShape[1]))]
+    unpadded = paddedArray[startRow:(startRow + int(extractShape)), startCol:(startCol + int(extractShape))]
     return unpadded
     
     
