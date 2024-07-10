@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Mon Jul  8 11:11:54 2024
@@ -21,6 +22,7 @@ from numpy import pi
 from padding import fastOn, fastOff
 from scipy.fft import fft2, ifft2, fftshift, ifftshift, fftfreq
 from matplotlib.colors import LogNorm
+from GSA import GSA , stanford
 
 # --- Globals ---
 wavelength = 253 * 1e-9
@@ -60,15 +62,15 @@ def Gaussian(sizeFactor = 11, wavelength = wavelength, w0 = w0, extent = extent,
         fig.colorbar(Real, ax = ax2, orientation = 'horizontal')
         #Intensity
         Intensity = ax3.imshow(np.abs(field)**2, extent = [extent[0], extent[1], extent[0], extent[1]])
-        ax3.set_title("Intenisty")
+        ax3.set_title("Intensity")
         fig.colorbar(Intensity, ax = ax3, orientation = 'horizontal')
         #Extra decoration
         fig.suptitle("Input Gaussian Beam Parts", size = 20)
-        fig.tight_layout()
         ax1.set_xlabel('Beam size (m)')
         ax2.set_xlabel('Beam size (m)')
         ax3.set_xlabel('Beam size (m)')
         ax1.set_ylabel('Beam size (m)')
+        fig.tight_layout()
         plt.show()
     
     return field
@@ -194,3 +196,45 @@ def Lens(inputBeam, f, wavelength = wavelength, w0 = w0, extent = extent, plot =
     
     return outputBeam
     
+
+def phasePlate(inputBeam, hologram = [30, None], wavelength = wavelength, w0 = w0, extent = extent, plot = False):
+    if len(hologram) == 2:
+        iterations, target = hologram
+        hologram = GSA(inputBeam, iteration = iterations, target = target)
+        
+    inputPhase = np.angle(inputBeam)
+    phasePlate = np.subtract(inputPhase, hologram)
+        
+    outputBeam = inputBeam * np.exp(-1j * phasePlate)  
+    
+    if plot:
+        fig, (axA, axB) = plt.subplots(2, 2, figsize=(12, 10))
+        outphase = np.angle(outputBeam)
+
+        
+        subtract = axA[0].imshow(np.subtract(outphase, hologram), cmap = 'Reds', extent = [extent[0], extent[1], extent[0], extent[1]])
+        Real = axA[1].imshow(outputBeam.real, extent = [extent[0], extent[1], extent[0], extent[1]])
+        Imag = axB[0].imshow(outputBeam.imag, extent = [extent[0], extent[1], extent[0], extent[1]])
+        Intensity = axB[1].imshow(np.abs(outputBeam)**2, extent = [extent[0], extent[1], extent[0], extent[1]])
+        
+        fig.colorbar(subtract, ax = axA[0], orientation = 'vertical')
+        fig.colorbar(Real, ax = axA[1], orientation = 'vertical')
+        fig.colorbar(Imag, ax = axB[0], orientation = 'vertical')
+        fig.colorbar(Intensity, ax = axB[1], orientation = 'vertical')
+
+
+
+        axA[0].set_title("Difference in Hologram & Output Phase")
+        axA[1].set_title("Real Part")
+        axB[0].set_title("Imaginary part")
+        axB[1].set_title("Intensity")
+        
+        axA[0].set_xlabel('Beam size (m)')
+        axA[1].set_xlabel('Beam size (m)')
+        axB[0].set_xlabel('Beam size (m)')
+        axB[1].set_xlabel('Beam size (m)')
+        axA[0].set_ylabel('Beam size (m)')
+        fig.suptitle("Difference in Hologram and output Phase of the Beam", size = 20)
+        fig.tight_layout()
+        
+    return outputBeam
