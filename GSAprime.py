@@ -152,7 +152,7 @@ def hologram(phase):
     phase = np.where(phase<0, phase+2*np.pi, phase)
     p_max = np.max(phase)
     p_min = np.min(phase)
-    holo = ((phase - p_min)/(p_max- p_min))
+    holo = pi * ((phase - p_min)/(p_max- p_min))
     return holo
 
 def scalarProduct(field1, field2):

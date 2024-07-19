@@ -78,7 +78,6 @@ def paddingOff(paddedArray, size):
     
     startRow = int((paddedShape[0] - extractShape[0]) / 2)
     startCol = int((paddedShape[1] - extractShape[1]) / 2)
-    print(startRow, startCol)
     unpadded = paddedArray[startRow:(startRow + int(extractShape[0])), startCol:(startCol + int(extractShape[1]))]
     
     return unpadded
@@ -163,6 +162,13 @@ def fastOff(paddedArray, size):
     return unpadded
     
     
+
+
+
+
+
+
+
 
 
 
